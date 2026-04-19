@@ -1,6 +1,8 @@
 {
   "editor.formatOnSave": true,
   "editor.tabSize": 2,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "javascript.preferences.importModuleSpecifier": "relative",
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
