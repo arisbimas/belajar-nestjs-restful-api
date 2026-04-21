@@ -79,4 +79,70 @@ describe('UserController', () => {
       expect(response.body.errors).toBe('Username already exists');
     });
   });
+
+  describe('POST /api/users/login', () => {
+    beforeEach(async () => {
+      await testService.deleteUser();
+      await testService.createUser();
+    });
+
+    it('should be rejected if request is invalid', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/users/login')
+        .send({
+          username: '',
+          password: '',
+          name: '',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(400);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be able to login', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/users/login')
+        .send({
+          username: 'test',
+          password: 'test',
+        });
+      const user = (response.body as { data: UserResponse }).data;
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(200);
+      expect(user.username).toBe('test');
+      expect(user.name).toBe('test');
+      expect(user.token).toBeDefined();
+    });
+  });
+
+  describe('GET /api/users/current', () => {
+    beforeEach(async () => {
+      await testService.deleteUser();
+      await testService.createUser();
+    });
+
+    it('should be rejected if token is invalid', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/users/current')
+        .set('Authorization', 'wrong')
+        .send();
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(401);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.errors).toBeDefined();
+    });
+
+    it('should be able to get user', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/users/current')
+        .set('Authorization', 'test');
+      const user = (response.body as { data: UserResponse }).data;
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(200);
+      expect(user.username).toBe('test');
+      expect(user.name).toBe('test');
+    });
+  });
 });
