@@ -145,4 +145,62 @@ describe('UserController', () => {
       expect(user.name).toBe('test');
     });
   });
+
+  describe('PATCH /api/users/current', () => {
+    beforeEach(async () => {
+      await testService.deleteUser();
+      await testService.createUser();
+    });
+
+    it('should be rejected if request is invalid', async () => {
+      const response = await request(app.getHttpServer())
+        .patch('/api/users/current')
+        .set('Authorization', 'test')
+        .send({
+          password: '',
+          name: '',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(400);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be able update name', async () => {
+      const response = await request(app.getHttpServer())
+        .patch('/api/users/current')
+        .set('Authorization', 'test')
+        .send({
+          name: 'test updated',
+        });
+      const user = (response.body as { data: UserResponse }).data;
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(200);
+      expect(user.username).toBe('test');
+      expect(user.name).toBe('test updated');
+    });
+
+    it('should be able update password', async () => {
+      let response = await request(app.getHttpServer())
+        .patch('/api/users/current')
+        .set('Authorization', 'test')
+        .send({
+          password: 'test updated',
+        });
+      const user = (response.body as { data: UserResponse }).data;
+      expect(response.status).toBe(200);
+      expect(user.username).toBe('test');
+      expect(user.name).toBe('test');
+
+      response = await request(app.getHttpServer())
+        .post('/api/users/login')
+        .send({
+          username: 'test',
+          password: 'test updated',
+        });
+      const userLogin = (response.body as { data: UserResponse }).data;
+      expect(response.status).toBe(200);
+      expect(userLogin.token).toBeDefined();
+    });
+  });
 });

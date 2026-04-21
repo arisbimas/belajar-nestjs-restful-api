@@ -2,6 +2,7 @@ import {
   UserResponse,
   RegisterUserRequest,
   LoginUserRequest,
+  UpdateUserRequest,
 } from './../model/user.model';
 import { ValidationService } from './../common/validation.service';
 import { UserValidation } from './user.validation';
@@ -108,6 +109,34 @@ export class UserService {
     return {
       username: user.username,
       name: user.name,
+    };
+  }
+
+  async update(user: User, request: UpdateUserRequest): Promise<UserResponse> {
+    this.logger.info(
+      `UserService.update user: ${JSON.stringify(user)}, request: ${JSON.stringify(
+        request,
+      )}`,
+    );
+    const updateRequest: UpdateUserRequest = this.validationService.validate(
+      UserValidation.UPDATE,
+      request,
+    ) as UpdateUserRequest;
+
+    if (updateRequest.name) user.name = updateRequest.name;
+    if (updateRequest.password)
+      user.password = await bcrypt.hash(updateRequest.password, 10);
+
+    const result = await this.prismaService.user.update({
+      where: {
+        username: user.username,
+      },
+      data: user,
+    });
+
+    return {
+      username: result.username,
+      name: result.name,
     };
   }
 }
