@@ -203,4 +203,37 @@ describe('UserController', () => {
       expect(userLogin.token).toBeDefined();
     });
   });
+
+  describe('DELETE /api/users/current', () => {
+    beforeEach(async () => {
+      await testService.deleteUser();
+      await testService.createUser();
+    });
+
+    it('should be rejected if token is invalid', async () => {
+      const response = await request(app.getHttpServer())
+        .delete('/api/users/current')
+        .set('Authorization', 'wrong');
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+
+      expect(response.status).toBe(401);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.errors).toBeDefined();
+    });
+
+    it('should be able to logout', async () => {
+      const response = await request(app.getHttpServer())
+        .delete('/api/users/current')
+        .set('Authorization', 'test');
+      const user = (response.body as { data: UserResponse }).data;
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(200);
+      expect(user).toBe(true);
+
+      const userAfterLogout = await testService.getUser();
+      expect(userAfterLogout).not.toBeNull();
+      expect(userAfterLogout!.token).toBeNull();
+    });
+  });
 });
