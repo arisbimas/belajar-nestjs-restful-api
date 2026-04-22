@@ -3,7 +3,11 @@ import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Logger } from 'winston';
 import { PrismaService } from '../common/prisma.service';
 import { Contact, User } from '../../generated/prisma/client';
-import { ContactResponse, CreateContactRequest } from '../model/contact.model';
+import {
+  ContactResponse,
+  CreateContactRequest,
+  UpdateContactRequest,
+} from '../model/contact.model';
 import { ValidationService } from '../common/validation.service';
 import { ContactValidation } from './contact.validation';
 
@@ -43,17 +47,47 @@ export class ContactService {
     };
   }
 
-  async get(user: User, contactId: number): Promise<ContactResponse> {
-    this.logger.info(`ContactService.get(${user.username})`);
+  async checkContactMustExist(
+    username: string,
+    contactId: number,
+  ): Promise<Contact> {
     const contact = await this.prismaService.contact.findFirst({
       where: {
-        username: user.username,
+        username,
         id: contactId,
       },
     });
     if (!contact) {
       throw new HttpException('Contact not found', HttpStatus.NOT_FOUND);
     }
+    return contact;
+  }
+
+  async get(user: User, contactId: number): Promise<ContactResponse> {
+    this.logger.info(`ContactService.get(${user.username})`);
+    const contact = await this.checkContactMustExist(user.username, contactId);
+    return this.toContactResponse(contact);
+  }
+
+  async update(user: User, request: UpdateContactRequest) {
+    this.logger.info(
+      `ContactService.update(${user.username}, ${JSON.stringify(request)})`,
+    );
+    const updateRequest: UpdateContactRequest = this.validationService.validate(
+      ContactValidation.UPDATE,
+      request,
+    ) as UpdateContactRequest;
+    let contact = await this.checkContactMustExist(
+      user.username,
+      updateRequest.id,
+    );
+
+    contact = await this.prismaService.contact.update({
+      where: {
+        id: contact.id,
+      },
+      data: updateRequest,
+    });
     return this.toContactResponse(contact);
   }
 }

@@ -111,4 +111,69 @@ describe('ContactController', () => {
       expect(body.phone).toBe('1234567890');
     });
   });
+
+  describe('PUT /api/contacts/:contactId', () => {
+    beforeEach(async () => {
+      await testService.deleteContact();
+      await testService.deleteUser();
+      await testService.createUser();
+      await testService.createContact();
+    });
+
+    it('should be rejected if request is invalid', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .put(`/api/contacts/${contact.id}`)
+        .set('Authorization', `test`)
+        .send({
+          first_name: '',
+          last_name: '',
+          email: 'invalid-email',
+          phone: '',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(400);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be rejected if contact is not found', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .put(`/api/contacts/${contact.id + 1}`)
+        .set('Authorization', `test`)
+        .send({
+          first_name: 'test',
+          last_name: 'test',
+          email: 'test@example.com',
+          phone: '1234567890',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(404);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be able to update an existing contact', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .put(`/api/contacts/${contact.id}`)
+        .set('Authorization', `test`)
+        .send({
+          first_name: 'test updated',
+          last_name: 'test updated',
+          email: 'testupdated@example.com',
+          phone: '12345678901',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse }).data;
+      expect(response.status).toBe(200);
+      expect(body.id).toBe(contact.id);
+      expect(body.first_name).toBe('test updated');
+      expect(body.last_name).toBe('test updated');
+      expect(body.email).toBe('testupdated@example.com');
+      expect(body.phone).toBe('12345678901');
+    });
+  });
 });
