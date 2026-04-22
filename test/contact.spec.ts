@@ -15,7 +15,7 @@ describe('ContactController', () => {
   let logger: Logger;
   let testService: TestService;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule, TestModule],
     }).compile();
@@ -27,7 +27,7 @@ describe('ContactController', () => {
     testService = app.get<TestService>(TestService);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
   });
 
@@ -206,6 +206,135 @@ describe('ContactController', () => {
       const body = (response.body as { data: ContactResponse }).data;
       expect(response.status).toBe(200);
       expect(body).toBe(true);
+    });
+  });
+
+  describe('GET /api/contacts', () => {
+    beforeEach(async () => {
+      await testService.deleteContact();
+      await testService.deleteUser();
+      await testService.createUser();
+      await testService.createContact();
+    });
+
+    it('should be able to get a contact', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse[] }).data;
+      expect(response.status).toBe(200);
+      expect(body.length).toBe(1);
+    });
+
+    it('should be able to get a contacts by name', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`)
+        .send({
+          name: 'est',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse[] }).data;
+      expect(response.status).toBe(200);
+      expect(body.length).toBe(1);
+    });
+
+    it('should be able to get a contacts by name not found', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`)
+        .query({
+          name: 'wrong name',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse[] }).data;
+      expect(response.status).toBe(200);
+      expect(body.length).toBe(0);
+    });
+
+    it('should be able to get a contacts by email', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`)
+        .send({
+          email: 'est',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse[] }).data;
+      expect(response.status).toBe(200);
+      expect(body.length).toBe(1);
+    });
+
+    it('should be able to get a contacts by email not found', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`)
+        .query({
+          email: 'wrong email',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse[] }).data;
+      expect(response.status).toBe(200);
+      expect(body.length).toBe(0);
+    });
+
+    it('should be able to get a contacts by phone', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`)
+        .send({
+          phone: '123',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse[] }).data;
+      expect(response.status).toBe(200);
+      expect(body.length).toBe(1);
+    });
+
+    it('should be able to get a contacts by phone not found', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`)
+        .query({
+          phone: '000',
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse[] }).data;
+      expect(response.status).toBe(200);
+      expect(body.length).toBe(0);
+    });
+
+    it('should be able to get a contacts with page', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts`)
+        .set('Authorization', `test`)
+        .query({
+          size: 1,
+          page: 2,
+        });
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = response.body as {
+        data: ContactResponse[];
+        paging: {
+          current_page: number;
+          size: number;
+          total_page: number;
+        };
+      };
+      expect(response.status).toBe(200);
+      expect(body.data.length).toBe(0);
+      expect(body.paging.current_page).toBe(2);
+      expect(body.paging.size).toBe(1);
+      expect(body.paging.total_page).toBe(1);
     });
   });
 });
