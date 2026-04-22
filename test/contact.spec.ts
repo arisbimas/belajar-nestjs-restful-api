@@ -176,4 +176,36 @@ describe('ContactController', () => {
       expect(body.phone).toBe('12345678901');
     });
   });
+
+  describe('DELETE /api/contacts/:contactId', () => {
+    beforeEach(async () => {
+      await testService.deleteContact();
+      await testService.deleteUser();
+      await testService.createUser();
+      await testService.createContact();
+    });
+
+    it('should be rejected if contact is not found', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .delete(`/api/contacts/${contact.id + 1}`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(404);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be able to delete a contact', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .delete(`/api/contacts/${contact.id}`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse }).data;
+      expect(response.status).toBe(200);
+      expect(body).toBe(true);
+    });
+  });
 });
