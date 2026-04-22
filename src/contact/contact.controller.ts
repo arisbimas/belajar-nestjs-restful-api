@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import { ContactService } from './contact.service';
 import { Auth } from '../common/auth.decorator';
 import { ContactResponse, CreateContactRequest } from '../model/contact.model';
@@ -16,6 +24,18 @@ export class ContactController {
     @Body() request: CreateContactRequest,
   ): Promise<WebResponse<ContactResponse>> {
     const contact = await this.contactService.create(user, request);
+    return {
+      data: contact,
+    };
+  }
+
+  @Get('/:contactId')
+  @HttpCode(200)
+  async get(
+    @Auth() user: User,
+    @Param('contactId', ParseIntPipe) contactId: number,
+  ): Promise<WebResponse<ContactResponse>> {
+    const contact = await this.contactService.get(user, contactId);
     return {
       data: contact,
     };

@@ -8,6 +8,7 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { TestService } from './test.service';
 import { TestModule } from './test.module';
 import { ContactResponse } from '../src/model/contact.model';
+import { Contact } from '../generated/prisma/client';
 
 describe('ContactController', () => {
   let app: INestApplication<App>;
@@ -72,6 +73,42 @@ describe('ContactController', () => {
       expect(contact.last_name).toBe('test');
       expect(contact.email).toBe('test@example.com');
       expect(contact.phone).toBe('1234567890');
+    });
+  });
+
+  describe('GET /api/contacts/:contactId', () => {
+    beforeEach(async () => {
+      await testService.deleteContact();
+      await testService.deleteUser();
+      await testService.createUser();
+      await testService.createContact();
+    });
+
+    it('should be rejected if contact is not found', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts/${contact.id + 1}`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(404);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be able to get a contact', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts/${contact.id}`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const body = (response.body as { data: ContactResponse }).data;
+      expect(response.status).toBe(200);
+      expect(body.id).toBe(contact.id);
+      expect(body.first_name).toBe(contact.first_name);
+      expect(body.last_name).toBe(contact.last_name);
+      expect(body.email).toBe(contact.email);
+      expect(body.phone).toBe('1234567890');
     });
   });
 });
