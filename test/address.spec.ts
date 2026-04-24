@@ -228,4 +228,55 @@ describe('AddressController', () => {
       expect(response.body).toBeDefined();
     });
   });
+
+  describe('DELETE /api/contacts/:contactId/addresses/:addressId', () => {
+    beforeEach(async () => {
+      await testService.deleteAddress();
+      await testService.deleteContact();
+      await testService.deleteUser();
+      await testService.createUser();
+      await testService.createContact();
+      await testService.createAddress();
+    });
+
+    it('should be rejected if contact is not found', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const address: Address = (await testService.getAddress())!;
+      const response = await request(app.getHttpServer())
+        .delete(`/api/contacts/${contact.id + 1}/addresses/${address.id}`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(404);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be rejected if address is not found', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const address: Address = (await testService.getAddress())!;
+      const response = await request(app.getHttpServer())
+        .delete(`/api/contacts/${contact.id}/addresses/${address.id + 1}`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(404);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be able to remove address', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const address: Address = (await testService.getAddress())!;
+      const response = await request(app.getHttpServer())
+        .delete(`/api/contacts/${contact.id}/addresses/${address.id}`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const dataBody = (response.body as { data: boolean }).data;
+      expect(response.status).toBe(200);
+      expect(dataBody).toBe(true);
+
+      const getAddress: Address | null = await testService.getAddress();
+      expect(getAddress).toBeNull();
+    });
+  });
 });
