@@ -8,6 +8,7 @@ import {
   AddressResponse,
   CreateAddressRequest,
   GetAddressRequest,
+  UpdateAddressRequest,
 } from '../model/address.model';
 import { ValidationService } from '../common/validation.service';
 import { ContactService } from '../contact/contact.service';
@@ -30,6 +31,20 @@ export class AddressService {
       country: address.country,
       postal_code: address.postal_code as string,
     };
+  }
+
+  async checkAddressMustExist(contactId: number, addressId: number) {
+    const address = await this.prismaService.address.findFirst({
+      where: {
+        id: addressId,
+        contact_id: contactId,
+      },
+    });
+
+    if (!address) {
+      throw new HttpException('Address not found', HttpStatus.NOT_FOUND);
+    }
+    return address;
   }
 
   async create(
@@ -71,16 +86,44 @@ export class AddressService {
       getRequest.contact_id,
     );
 
-    const address = await this.prismaService.address.findFirst({
-      where: {
-        id: getRequest.address_id,
-        contact_id: getRequest.contact_id,
-      },
-    });
+    const address = await this.checkAddressMustExist(
+      getRequest.contact_id,
+      getRequest.address_id,
+    );
 
-    if (!address) {
-      throw new HttpException('Address not found', HttpStatus.NOT_FOUND);
-    }
+    return this.toAddressResponse(address);
+  }
+
+  async update(
+    user: User,
+    request: UpdateAddressRequest,
+  ): Promise<AddressResponse> {
+    this.logger.info(
+      `AddressService.update(${user.username}, ${JSON.stringify(request)})`,
+    );
+
+    const updateRequest = this.validationService.validate(
+      AddressValidation.UPDATE,
+      request,
+    );
+
+    await this.contactService.checkContactMustExist(
+      user.username,
+      updateRequest.contact_id,
+    );
+
+    let address = await this.checkAddressMustExist(
+      updateRequest.contact_id,
+      updateRequest.id,
+    );
+
+    address = await this.prismaService.address.update({
+      where: {
+        id: updateRequest.id,
+        contact_id: updateRequest.contact_id,
+      },
+      data: updateRequest,
+    });
 
     return this.toAddressResponse(address);
   }
