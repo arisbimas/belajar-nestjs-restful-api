@@ -279,4 +279,44 @@ describe('AddressController', () => {
       expect(getAddress).toBeNull();
     });
   });
+
+  describe('LIST /api/contacts/:contactId/addresses', () => {
+    beforeEach(async () => {
+      await testService.deleteAddress();
+      await testService.deleteContact();
+      await testService.deleteUser();
+      await testService.createUser();
+      await testService.createContact();
+      await testService.createAddress();
+    });
+
+    it('should be rejected if contact is not found', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts/${contact.id + 1}/addresses`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      expect(response.status).toBe(404);
+      expect(response.body).toBeDefined();
+    });
+
+    it('should be able to get list address', async () => {
+      const contact: Contact = (await testService.getContact())!;
+      const response = await request(app.getHttpServer())
+        .get(`/api/contacts/${contact.id}/addresses`)
+        .set('Authorization', `test`);
+
+      logger.info(`Response ${JSON.stringify(response.body)}`);
+      const dataBody = (response.body as { data: AddressResponse[] }).data;
+      expect(dataBody.length).toBe(1);
+      expect(response.status).toBe(200);
+      expect(dataBody[0].id).toBeDefined();
+      expect(dataBody[0].street).toBe('test');
+      expect(dataBody[0].city).toBe('test');
+      expect(dataBody[0].province).toBe('test');
+      expect(dataBody[0].country).toBe('test');
+      expect(dataBody[0].postal_code).toBe('1111');
+    });
+  });
 });
